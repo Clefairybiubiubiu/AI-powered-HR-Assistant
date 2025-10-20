@@ -1,40 +1,22 @@
 # Resume-JD Matching Dashboard
 
-A comprehensive Streamlit application that matches resumes with job descriptions using both traditional TF-IDF and advanced semantic matching with Sentence-BERT.
-
-## 🎯 **Dual Matching Modes**
-
-### 📊 **TF-IDF Mode** (Traditional)
-
-- Uses scikit-learn's TfidfVectorizer for text analysis
-- Cosine similarity computation
-- Fast and reliable for keyword-based matching
-
-### 🧠 **Semantic Mode** (Advanced)
-
-- **Sentence-BERT Integration**: Uses `all-MiniLM-L6-v2` model for semantic understanding
-- **Section-based Analysis**: Separate matching for Education, Skills, and Experience
-- **Weighted Scoring**: Customizable weights (default: Education 20%, Skills 50%, Experience 30%)
-- **Importance Detection**: Automatically detects "Required", "Preferred", and "Nice-to-have" requirements
-- **Natural Language Explanations**: AI-generated explanations for each match
+A comprehensive Streamlit application that matches resumes with job descriptions using TF-IDF and cosine similarity.
 
 ## Features
 
 - **Multi-format Support**: Handles TXT, PDF, and DOCX files
 - **Smart Name Extraction**: Automatically extracts candidate names from resume content
 - **Intelligent File Naming**: Renames candidates to "Name-resume" format
+- **TF-IDF Analysis**: Uses scikit-learn's TfidfVectorizer for text analysis
+- **Cosine Similarity**: Computes similarity scores between resumes and job descriptions
 - **Interactive Dashboard**:
   - 🔥 **Heatmap**: Visual similarity matrix with color coding
   - 📈 **Top Matches**: Ranked results with match percentages
   - 📋 **Detailed Scores**: Complete similarity matrix with statistics
-  - 🎯 **Section Breakdown**: Detailed analysis of each section's similarity (Semantic mode only)
   - 👤 **Resume Details**: Click to view candidate information, skills, experience
   - 💼 **Job Requirements**: Click to view job details and top candidates
-- **Export Functionality**: Download results as CSV with explanations
 - **Real-time Processing**: Load and analyze documents on-the-fly
 - **Auto-refresh**: Detects file changes and automatically reloads
-- **Dynamic Weight Controls**: Real-time adjustment of section weights (Semantic mode)
-- **Caching**: Optimized performance with embedding caching
 
 ## Installation
 
@@ -73,8 +55,8 @@ streamlit run resume_jd_matcher.py
 
 ```
 resume_jd_matcher.py          # Main Streamlit application
+test_resume_matcher.py        # Test script
 resume_matcher_requirements.txt # Required packages
-RESUME_MATCHER_README.md      # Documentation
 ```
 
 ## Example Data Structure
@@ -89,39 +71,6 @@ RESUME_MATCHER_README.md      # Documentation
 ├── JD2.docx                  → JD2
 └── JD3.docx                  → JD3
 ```
-
-## 🧠 **Semantic Matching Features**
-
-### **Section-based Analysis**
-
-- **Education**: Matches academic qualifications and degrees
-- **Skills**: Matches technical skills with importance weighting
-- **Experience**: Matches work experience and career progression
-
-### **Importance Detection**
-
-- **Required** (1.0x): "Python (Required)", "Must have SQL"
-- **Preferred** (0.75x): "R (Preferred)", "Plus: Machine Learning"
-- **Nice-to-have** (0.5x): "Excel (Nice-to-have)", "Optional: Docker"
-
-### **Weighted Scoring**
-
-- **Education Weight**: 20% (default)
-- **Skills Weight**: 50% (default)
-- **Experience Weight**: 30% (default)
-- **Dynamic Adjustment**: Real-time weight changes via sliders
-
-### **Natural Language Explanations**
-
-- AI-generated explanations for each candidate-JD match
-- Highlights strongest alignment areas
-- Provides context for similarity scores
-
-### **Export Functionality**
-
-- Download results as CSV with explanations
-- Includes section scores and match percentages
-- Compatible with Excel and other analysis tools
 
 **File Naming Rules:**
 
