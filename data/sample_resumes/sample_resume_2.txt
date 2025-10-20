@@ -1,0 +1,49 @@
+Sarah Johnson
+Data Scientist
+Email: sarah.johnson@email.com
+Phone: (555) 987-6543
+Location: New York, NY
+
+PROFESSIONAL SUMMARY
+Data scientist with 4+ years of experience in machine learning, statistical analysis, 
+and data visualization. Passionate about turning data into actionable insights and 
+building predictive models that drive business value.
+
+TECHNICAL SKILLS
+Programming: Python, R, SQL
+Data Science: pandas, numpy, scikit-learn, tensorflow, pytorch
+Visualization: matplotlib, seaborn, plotly, tableau
+Databases: PostgreSQL, MySQL, MongoDB
+Cloud: AWS, Google Cloud Platform
+Tools: Jupyter, Git, Docker
+
+EXPERIENCE
+
+Senior Data Scientist | DataCorp | 2021 - Present
+- Built ML models for customer churn prediction with 85% accuracy
+- Led data science projects worth $2M+ in business impact
+- Mentored junior data scientists and conducted ML workshops
+- Technologies: Python, scikit-learn, AWS, PostgreSQL
+
+Data Scientist | Analytics Inc. | 2019 - 2021
+- Developed recommendation systems using collaborative filtering
+- Created interactive dashboards using Tableau and Plotly
+- Performed A/B testing and statistical analysis
+- Technologies: Python, R, SQL, Tableau
+
+Data Analyst | FinanceCorp | 2018 - 2019
+- Analyzed financial data and created reports for stakeholders
+- Built ETL pipelines for data processing
+- Collaborated with business teams on data requirements
+- Technologies: SQL, Python, Excel, Power BI
+
+EDUCATION
+Master of Science in Data Science
+Columbia University | 2018
+
+Bachelor of Science in Statistics
+University of Michigan | 2016
+
+CERTIFICATIONS
+AWS Certified Machine Learning Specialty
+Google Data Analytics Professional Certificate

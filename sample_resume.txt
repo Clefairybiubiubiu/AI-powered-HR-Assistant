@@ -1,0 +1,38 @@
+John Smith
+Senior Software Engineer
+Email: john.smith@email.com
+Phone: (555) 123-4567
+
+SUMMARY
+Experienced software engineer with 6+ years of experience in Python development, 
+microservices architecture, and cloud technologies. Strong background in building 
+scalable web applications and leading development teams.
+
+TECHNICAL SKILLS
+Programming Languages: Python, JavaScript, TypeScript, SQL
+Frameworks: Django, Flask, React, Node.js
+Databases: PostgreSQL, MongoDB, Redis
+Cloud Platforms: AWS, Azure, Docker, Kubernetes
+Tools: Git, Jenkins, Jira, Confluence
+
+EXPERIENCE
+Senior Software Engineer | TechCorp Inc. | 2020 - Present
+- Led development of microservices architecture serving 1M+ users
+- Implemented CI/CD pipelines using Jenkins and Docker
+- Technologies: Python, Django, PostgreSQL, AWS, Kubernetes
+
+Software Engineer | StartupXYZ | 2018 - 2020
+- Developed REST APIs using Flask and FastAPI
+- Built data processing pipelines using Python and pandas
+- Technologies: Python, Flask, MongoDB, Docker
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of California, Berkeley | 2016
+
+Master of Science in Software Engineering
+Stanford University | 2018
+
+CERTIFICATIONS
+AWS Certified Solutions Architect
+Google Cloud Professional Developer
