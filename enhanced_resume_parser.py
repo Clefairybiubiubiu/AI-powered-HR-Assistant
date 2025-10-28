@@ -345,7 +345,8 @@ class EnhancedResumeParser:
         sections = {
             'education': '',
             'skills': '',
-            'experience': ''
+            'experience': '',
+            'summary': ''
         }
         
         # Extract education with better filtering
@@ -396,7 +397,144 @@ class EnhancedResumeParser:
             
             sections['experience'] = ' '.join(experience_items)
         
+        # Extract summary with enhanced detection
+        summary_text = parsed_data.get('summary', '')
+        if not summary_text:
+            # Try alternative keys that might contain summary
+            for key in ['objective', 'profile', 'overview', 'about']:
+                if parsed_data.get(key):
+                    summary_text = parsed_data[key]
+                    break
+        
+        if summary_text:
+            sections['summary'] = summary_text
+        else:
+            # Fallback: concatenate experience + education if summary is missing
+            fallback_parts = []
+            if sections['experience']:
+                fallback_parts.append(sections['experience'][:200])  # First 200 chars
+            if sections['education']:
+                fallback_parts.append(sections['education'][:100])  # First 100 chars
+            if fallback_parts:
+                sections['summary'] = ' '.join(fallback_parts)
+        
         return sections
+    
+    def parse_resume_sections(self, text: str, file_path: str = "") -> Dict[str, str]:
+        """Parse resume sections with enhanced summary detection and fallback logic."""
+        sections = {
+            'summary': '',
+            'education': '',
+            'skills': '',
+            'experience': '',
+            'contact': ''
+        }
+        
+        # Enhanced summary section header regex patterns
+        summary_patterns = [
+            r'professional\s+summary',
+            r'profile',
+            r'summary',
+            r'summary\s+of\s+qualifications',
+            r'professional\s+overview',
+            r'about\s+me',
+            r'objective',
+            r'career\s+objective',
+            r'executive\s+summary',
+            r'personal\s+summary',
+            r'career\s+summary',
+            r'professional\s+profile',
+            r'personal\s+statement'
+        ]
+        
+        # Compile regex patterns (case insensitive)
+        summary_regex = re.compile('|'.join(summary_patterns), re.IGNORECASE)
+        
+        lines = text.split('\n')
+        current_section = None
+        in_summary = False
+        
+        for i, line in enumerate(lines):
+            line_lower = line.lower().strip()
+            original_line = line.strip()
+            
+            # Skip empty lines
+            if not original_line:
+                continue
+            
+            # Check for summary section headers
+            if summary_regex.search(line_lower):
+                current_section = 'summary'
+                in_summary = True
+                continue
+            
+            # Check for other section headers
+            if any(word in line_lower for word in ['education', 'academic', 'degree']):
+                current_section = 'education'
+                in_summary = False
+                continue
+            elif any(word in line_lower for word in ['skills', 'technical', 'competencies']):
+                current_section = 'skills'
+                in_summary = False
+                continue
+            elif any(word in line_lower for word in ['experience', 'employment', 'work history', 'career']):
+                current_section = 'experience'
+                in_summary = False
+                continue
+            elif any(word in line_lower for word in ['contact', 'phone', 'email', 'address']):
+                current_section = 'contact'
+                in_summary = False
+                continue
+            
+            # Add content to current section
+            if current_section and original_line:
+                # Skip contact information in non-contact sections
+                if current_section != 'contact' and self._is_contact_info(line_lower):
+                    continue
+                
+                sections[current_section] += original_line + " "
+        
+        # Fallback logic for PDFs and TXT files
+        if not sections['summary'].strip() and file_path:
+            file_ext = file_path.lower().split('.')[-1]
+            if file_ext in ['pdf', 'txt']:
+                # Use first ~3 sentences as fallback summary
+                sentences = self._extract_first_sentences(text, num_sentences=3)
+                if sentences:
+                    sections['summary'] = sentences
+                    print(f"DEBUG: Used fallback summary for {file_ext.upper()} file: {sentences[:100]}...")
+        
+        # Additional fallback: concatenate experience + education if summary is still empty
+        if not sections['summary'].strip():
+            fallback_parts = []
+            if sections['experience']:
+                fallback_parts.append(sections['experience'][:200])
+            if sections['education']:
+                fallback_parts.append(sections['education'][:100])
+            if fallback_parts:
+                sections['summary'] = ' '.join(fallback_parts)
+                print(f"DEBUG: Used experience+education fallback summary")
+        
+        return sections
+    
+    def _extract_first_sentences(self, text: str, num_sentences: int = 3) -> str:
+        """Extract the first few sentences from text as fallback summary."""
+        import re
+        
+        # Split text into sentences using common sentence endings
+        sentences = re.split(r'[.!?]+', text)
+        
+        # Clean and filter sentences
+        clean_sentences = []
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if sentence and len(sentence) > 10:  # Skip very short sentences
+                # Skip sentences that look like headers or contact info
+                if not any(word in sentence.lower() for word in ['contact', 'email', 'phone', 'address', 'name:']):
+                    clean_sentences.append(sentence)
+        
+        # Return first num_sentences sentences
+        return '. '.join(clean_sentences[:num_sentences]) + '.' if clean_sentences else ''
     
     def get_confidence_scores(self, result: Dict[str, Any]) -> Dict[str, float]:
         """Calculate confidence scores for extracted data."""
