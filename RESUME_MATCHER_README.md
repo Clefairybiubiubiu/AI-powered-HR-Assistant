@@ -36,6 +36,52 @@ A comprehensive Streamlit application that matches resumes with job descriptions
 - **Dynamic Weight Controls**: Real-time adjustment of section weights (Semantic mode)
 - **Caching**: Optimized performance with embedding caching
 
+## 🚀 First-Time Setup Guide
+
+Follow this checklist when you clone or download the project for the very first time.
+
+1. **Install prerequisites**
+
+   - Python 3.9+ (`python3 --version`)
+   - pip (`python3 -m ensurepip --upgrade`)
+   - Optional but recommended: `virtualenv` (`pip install virtualenv`)
+
+2. **Create a virtual environment**
+
+   ```bash
+   cd /path/to/Hr\ Assistant
+   python3 -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+
+   ```bash
+   pip install --upgrade pip
+   pip install -r resume_matcher_requirements.txt
+   ```
+
+   > For the Robert assistant / Gemini features you also need `google-generativeai`.  
+   > If it is not already in the requirements file: `pip install google-generativeai`.
+
+4. **Prepare runtime assets**
+
+   - Create `data/` (or your preferred directory) with resumes/JDs.
+   - Ensure `.env` remains empty or only contains non-secret defaults (the Gemini key is entered in the UI).
+
+5. **Run the app**
+
+   ```bash
+   streamlit run resume_jd_matcher.py
+   ```
+
+   - The sidebar contains the “AI Enhancement” section → paste your Google Gemini API key when you need AI features (Robert, match explanations, etc.). The key is stored only in `st.session_state` during that session.
+
+6. **First launch sanity checks**
+   - Click **Load Documents** and verify the heatmap populates.
+   - Open “Candidate Profiles” to confirm extraction works.
+   - Test “Ask Robert” so you know the Gemini integration is configured.
+
 ## Installation
 
 1. Install required packages:
@@ -166,3 +212,36 @@ The application successfully processes:
 - Machine learning-based matching
 - Export results to CSV/Excel
 - Batch processing capabilities
+
+## ✅ Pre-Publish Safety Checklist
+
+Before pushing the repository to GitHub:
+
+1. **Confirm no sensitive files are tracked**
+
+   ```bash
+   git status
+   git ls-files '*.pdf' '*.docx'
+   ```
+
+   `.gitignore` already excludes `.env`, `.env.*`, and common resume formats, but double-check.
+
+2. **Verify no API keys in code**
+
+   ```bash
+   rg -n "API_KEY" -g'*.*'
+   rg -n "gemini" resume_jd_matcher.py resume_matcher -g'*.*'
+   ```
+
+   All keys must be provided via the Streamlit sidebar at runtime.
+
+3. **Remove local caches / artifacts**
+
+   ```bash
+   rm -rf .streamlit/
+   rm -rf __pycache__ .venv
+   ```
+
+4. **Optional:** run tests / linting (if configured) and capture the output in the commit message.
+
+Following this guide ensures new contributors can spin up the project quickly and that the repository stays clean and safe to publish.

@@ -13,3 +13,6 @@ pyresparser>=1.0.0
 nltk>=3.8.0
 chardet>=5.0.0
 pathlib
+
+# Optional: LLM API support for enhanced explanations and summaries (FREE)
+# google-generativeai>=0.3.0  # For Google Gemini (FREE tier)
