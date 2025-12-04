@@ -4,7 +4,6 @@ A comprehensive Streamlit application that intelligently matches resumes with jo
 
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![Streamlit](https://img.shields.io/badge/streamlit-1.0+-red.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 ## ✨ Features
 
@@ -194,9 +193,12 @@ pip install sentence-transformers
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📝 License
+## 🙏 Special Thanks
 
-This project is open source and available under the MIT License.
+Thank you to our collaborators for their contributions to this project:
+
+- [@anniegjr](https://github.com/anniegjr) (anniegjr)
+- [@yong1yan](https://github.com/yong1yan) (yong1yan)
 
 ## 🙏 Acknowledgments
 
