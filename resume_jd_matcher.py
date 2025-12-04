@@ -22,6 +22,8 @@ from docx import Document
 import warnings
 warnings.filterwarnings('ignore')
 
+from resume_matcher.skill_taxonomy_onet import ONETSkillTaxonomy
+
 # Semantic matching imports
 try:
     from sentence_transformers import SentenceTransformer
@@ -1015,7 +1017,7 @@ def extract_structured_requirements(jd_text: str) -> Dict:
 class ResumeSemanticMatcher:
     """Semantic matching using Sentence-BERT."""
     
-    def __init__(self, data_dir: str = None):
+    def __init__(self, data_dir: str = None, use_onet_taxonomy: bool = False):
         self.data_dir = Path(data_dir) if data_dir else None
         self.processor = DocumentProcessor()
         self.resumes = {}
@@ -1027,6 +1029,8 @@ class ResumeSemanticMatcher:
         self.similarity_matrix = None
         self.original_filenames = {}
         self.extracted_names = {}
+        self.use_onet_taxonomy = use_onet_taxonomy
+        self.onet_taxonomy = ONETSkillTaxonomy() if use_onet_taxonomy else None
         
     def load_documents(self):
         """Load all resumes and job descriptions from the directory."""
@@ -1354,7 +1358,40 @@ class ResumeSemanticMatcher:
         # Always include raw text for fallback extraction
         sections['raw_text'] = text
         
+        # Store placeholder O*NET expansion data for downstream consumers
+        if self.use_onet_taxonomy:
+            sections['_onet_skill_clusters'] = self._expand_skills_with_onet(sections.get('skills'))
+        
         return sections
+    
+    # ------------------------------------------------------------------
+    # O*NET scaffolding helpers
+    # ------------------------------------------------------------------
+    def _coerce_skill_list(self, skills_entry: Any) -> List[str]:
+        """Normalize skill content into a list so expansion can iterate safely."""
+        if not skills_entry:
+            return []
+        if isinstance(skills_entry, list):
+            return [str(item).strip() for item in skills_entry if str(item).strip()]
+        if isinstance(skills_entry, str):
+            parts = re.split(r"[,;/\n]", skills_entry)
+            return [part.strip() for part in parts if part.strip()]
+        return [str(skills_entry).strip()]
+
+    def _expand_skills_with_onet(self, skills_entry: Any) -> Dict[str, Dict[str, List[str]]]:
+        """
+        Expand a collection of skills via O*NET when enabled.
+        Returns a mapping of original skill -> expanded cluster data.
+        """
+        if not (self.use_onet_taxonomy and self.onet_taxonomy):
+            return {}
+        skill_list = self._coerce_skill_list(skills_entry)
+        expanded: Dict[str, Dict[str, List[str]]] = {}
+        for skill in skill_list:
+            if not skill:
+                continue
+            expanded[skill] = self.onet_taxonomy.expand_skill(skill)
+        return expanded
     
     def extract_sections_enhanced(self, file_path: str) -> Dict[str, str]:
         """Extract sections using enhanced parser with better format detection."""
@@ -1806,6 +1843,10 @@ class ResumeSemanticMatcher:
                         importance = extract_importance_level(line)
                         requirements['education'].append((line.strip(), importance))
         
+        if self.use_onet_taxonomy:
+            skills_only = [req[0] for req in requirements.get('skills', [])]
+            requirements['_onet_skill_clusters'] = self._expand_skills_with_onet(skills_only)
+        
         return requirements
     
     def compute_semantic_similarity(self, education_weight: float = 0.1, skills_weight: float = 0.4, experience_weight: float = 0.4, summary_weight: float = 0.2):
@@ -2014,6 +2055,15 @@ class ResumeSemanticMatcher:
         if status_text is not None:
             status_text.empty()
         
+        if self.use_onet_taxonomy:
+            for sections in resume_sections.values():
+                if '_onet_skill_clusters' not in sections:
+                    sections['_onet_skill_clusters'] = self._expand_skills_with_onet(sections.get('skills'))
+            for jd_data in jd_requirements.values():
+                if isinstance(jd_data, dict) and '_onet_skill_clusters' not in jd_data:
+                    skills_only = [req[0] for req in jd_data.get('skills', [])]
+                    jd_data['_onet_skill_clusters'] = self._expand_skills_with_onet(skills_only)
+        
         # Compute improved similarities using weighted embedding approach
         similarities = {}
         
@@ -2117,6 +2167,13 @@ class ResumeSemanticMatcher:
                     for section in ['education', 'skills', 'experience', 'summary', 'raw_text']
                 )
                 print(f"Has usable content: {has_content}")
+
+                if self.use_onet_taxonomy and self.onet_taxonomy:
+                    resume_expanded = resume_sections_data.get('_onet_skill_clusters', {})
+                    jd_expanded = jd_reqs.get('_onet_skill_clusters', {})
+                    # Placeholder for future integration:
+                    # use resume_expanded and jd_expanded to award partial credit
+                    # for related O*NET cluster matches.
                 
                 if not has_content:
                     st.warning(f"⚠️ **Warning**: Resume '{resume_name}' has no extractable content! This will result in 0 similarity scores.")
@@ -4270,134 +4327,6 @@ class ResumeSemanticMatcher:
         
         return pd.DataFrame(results)
     
-    def extract_resume_summary(self, resume_text: str) -> Dict:
-        """Extract key information from resume."""
-        lines = resume_text.split('\n')
-        summary = {
-            'name': self.extract_candidate_name(resume_text),
-            'email': '',
-            'phone': '',
-            'location': '',
-            'skills': [],
-            'experience': [],
-            'education': [],
-            'summary': ''
-        }
-        
-        # Extract contact information
-        for line in lines:
-            line_lower = line.lower()
-            if '@' in line and 'email' in line_lower:
-                summary['email'] = line.strip()
-            elif 'phone' in line_lower or re.search(r'\(\d{3}\)', line):
-                summary['phone'] = line.strip()
-            elif any(city in line_lower for city in ['san francisco', 'new york', 'seattle', 'chicago', 'boston', 'austin']):
-                summary['location'] = line.strip()
-        
-        # Extract skills (look for skills sections)
-        in_skills_section = False
-        for line in lines:
-            line_lower = line.lower()
-            if 'skill' in line_lower and ('technical' in line_lower or 'core' in line_lower):
-                in_skills_section = True
-                continue
-            elif in_skills_section and line.strip():
-                if any(word in line_lower for word in ['experience', 'education', 'work', 'project']):
-                    in_skills_section = False
-                    break
-                # Extract skills from this line
-                skills = re.findall(r'\b[A-Za-z][A-Za-z0-9\s]+\b', line)
-                summary['skills'].extend([skill.strip() for skill in skills if len(skill.strip()) > 2])
-        
-        # Extract experience (look for job titles and companies)
-        for line in lines:
-            if any(word in line.lower() for word in ['engineer', 'developer', 'scientist', 'analyst', 'manager']) and '|' in line:
-                summary['experience'].append(line.strip())
-        
-        # Extract education
-        for line in lines:
-            if any(word in line.lower() for word in ['university', 'college', 'bachelor', 'master', 'phd', 'degree']):
-                summary['education'].append(line.strip())
-        
-        # Extract summary/objective with enhanced detection
-        in_summary = False
-        summary_keywords = [
-            'summary', 'objective', 'profile', 'about', 'overview', 
-            'professional summary', 'professional overview', 'about me',
-            'executive summary', 'career summary', 'personal summary',
-            'professional profile', 'career objective', 'personal statement'
-        ]
-        
-        for line in lines:
-            line_lower = line.lower()
-            # Check for summary section headers
-            if any(keyword in line_lower for keyword in summary_keywords):
-                in_summary = True
-                continue
-            elif in_summary and line.strip():
-                # Stop if we hit another major section
-                if any(word in line_lower for word in ['experience', 'education', 'skills', 'contact', 'work history', 'employment']):
-                    break
-                summary['summary'] += line.strip() + ' '
-        
-        # Add fallback: if summary is missing, concatenate experience + education
-        if not summary['summary'].strip():
-            fallback_parts = []
-            if summary['experience']:
-                fallback_parts.extend(summary['experience'][:2])  # First 2 experience entries
-            if summary['education']:
-                fallback_parts.extend(summary['education'][:1])   # First education entry
-            if fallback_parts:
-                summary['summary'] = ' '.join(fallback_parts)
-        
-        return summary
-    
-    def extract_jd_requirements(self, jd_text: str) -> Dict:
-        """Extract requirements from job description."""
-        lines = jd_text.split('\n')
-        requirements = {
-            'title': '',
-            'company': '',
-            'location': '',
-            'salary': '',
-            'requirements': [],
-            'responsibilities': [],
-            'skills_required': []
-        }
-        
-        # Extract title and company
-        for line in lines[:5]:
-            if any(word in line.lower() for word in ['engineer', 'developer', 'scientist', 'analyst', 'manager']):
-                requirements['title'] = line.strip()
-                break
-        
-        # Extract company
-        for line in lines:
-            if 'company:' in line.lower() or 'at ' in line.lower():
-                requirements['company'] = line.strip()
-                break
-        
-        # Extract requirements
-        in_requirements = False
-        for line in lines:
-            line_lower = line.lower()
-            if any(word in line_lower for word in ['requirement', 'qualification', 'must have', 'should have']):
-                in_requirements = True
-                continue
-            elif in_requirements and line.strip():
-                if any(word in line_lower for word in ['responsibilit', 'benefit', 'compensation', 'salary']):
-                    in_requirements = False
-                    break
-                if line.strip().startswith('-') or line.strip().startswith('•'):
-                    requirements['requirements'].append(line.strip())
-        
-        # Extract skills
-        for line in lines:
-            if any(skill in line.lower() for skill in ['python', 'java', 'sql', 'javascript', 'react', 'aws', 'docker']):
-                requirements['skills_required'].append(line.strip())
-        
-        return requirements
-    
     def get_directory_info(self) -> Dict:
         """Get information about files in the directory or uploaded files."""
         # If using file uploads (data_dir is None), return info from loaded documents
@@ -4553,6 +4482,17 @@ def main():
     
     # Update session state when checkbox changes
     st.session_state.use_llm = use_llm
+
+    if 'use_onet_taxonomy' not in st.session_state:
+        st.session_state.use_onet_taxonomy = False
+    use_onet_taxonomy = st.sidebar.checkbox(
+        "Enable O*NET Smart Skill Expansion",
+        value=st.session_state.use_onet_taxonomy,
+        help="Expand skills with O*NET clusters for richer matching (beta scaffold)"
+    )
+    st.session_state.use_onet_taxonomy = use_onet_taxonomy
+    if use_onet_taxonomy:
+        st.sidebar.info("O*NET expansion scaffold active. Add CSVs under data/onet/ to enable full functionality.")
     
     if use_llm and LLM_AVAILABLE:
         if is_llm_available():
@@ -4606,10 +4546,10 @@ def main():
     else:
         # Directory input (original method)
         data_dir = st.sidebar.text_input(
-        "Data Directory Path",
-        value="/Users/junfeibai/Desktop/5560/test",
-        help="Path to directory containing resumes and job descriptions"
-    )
+            "Data Directory Path",
+            value="/Users/junfeibai/Desktop/5560/test",
+            help="Path to directory containing resumes and job descriptions"
+        )
     
     # Mode selection
     matching_mode = st.sidebar.selectbox(
@@ -4895,7 +4835,7 @@ def main():
         if files_need_loading:
             with st.spinner("🔄 Auto-loading uploaded files..."):
                 if "Semantic" in matching_mode or "Improved Similarity" in matching_mode:
-                    matcher = ResumeSemanticMatcher(None)
+                    matcher = ResumeSemanticMatcher(None, use_onet_taxonomy=st.session_state.get('use_onet_taxonomy', False))
                 else:
                     matcher = ResumeJDMatcher(None)
                 
@@ -4937,7 +4877,7 @@ def main():
                     return
                 
                 if "Semantic" in matching_mode or "Improved Similarity" in matching_mode:
-                    matcher = ResumeSemanticMatcher(None)  # No directory needed
+                    matcher = ResumeSemanticMatcher(None, use_onet_taxonomy=st.session_state.get('use_onet_taxonomy', False))  # No directory needed
                 else:
                     matcher = ResumeJDMatcher(None)  # No directory needed
                 
@@ -4949,12 +4889,12 @@ def main():
                     st.error("❌ Please specify a directory path!")
                     return
                 
-            if "Semantic" in matching_mode or "Improved Similarity" in matching_mode:
-                matcher = ResumeSemanticMatcher(data_dir)
-            else:
-                matcher = ResumeJDMatcher(data_dir)
-            
-            matcher.load_documents()
+                if "Semantic" in matching_mode or "Improved Similarity" in matching_mode:
+                    matcher = ResumeSemanticMatcher(data_dir, use_onet_taxonomy=st.session_state.get('use_onet_taxonomy', False))
+                else:
+                    matcher = ResumeJDMatcher(data_dir)
+                
+                matcher.load_documents()
             
             # Check if documents were loaded successfully
             if matcher.resumes or matcher.job_descriptions:
@@ -6008,6 +5948,10 @@ def main():
                             'summary': '',
                             'raw_text': resume_text
                         }
+                    
+                    api_profile = None
+                    use_llm_enabled = st.session_state.get('use_llm', False)
+                    if use_llm_enabled and LLM_AVAILABLE and is_llm_available():
                         try:
                             llm_client = get_llm_client()
                             with st.spinner("🤖 Generating AI-enhanced profile..."):
